@@ -16,10 +16,12 @@ def decode(msg):
     
     client = InfluxDBClient('localhost', 8086, 'root', 'root', 'example')
     client.create_database('example')
-
+    
+    #print("ether_type =", ether_type)
     if ether_type == '0800':
         enteteip = struct.unpack('!B', msg[23:24])
         enteteip = ":".join([hex(part)[2:].zfill(4) for part in enteteip])
+        #print("enteteip =", enteteip)
 
         if enteteip == '0006':
             port_source = struct.unpack('!H', msg[34:36])[0]
@@ -29,6 +31,8 @@ def decode(msg):
             offset = bin(offset)[2:].zfill(16)[:4]
             offset = int(offset, base=2)
             offset = 34 + (offset * 4)
+            #print("port_dest    =", port_dest)  
+            #print("port_source  =", port_source)
 
             if port_dest == 80 or port_source == 80:
                 http_request = msg[offset:].decode(errors='ignore')
@@ -43,13 +47,21 @@ def decode(msg):
                               }
 
                             ]
-           
+                #print('serialization')
+                ##convert object to json
+                #serialized = json.dumps(myDictObj, sort_keys=True, indent=3)
+                #print("serialized =",serialized)
+                ## now we are gonna convert json to object
+                #deserialization = json.loads(serialized )
+                #print(type(deserialization), deserialization)
                 client.write_points(json_body)
                 print('insert reussi---')
                 result = client.query('select http_request from cpu_load_short')
                 print("Result: {0}".format(result), '---')
                 #print("list database =",client.get_list_database(),'---')
               
+                
+
 
 
 def main():
