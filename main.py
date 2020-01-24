@@ -3,6 +3,7 @@ import socket
 import struct
 import time
 import re
+import requests
 
 from influxdb import InfluxDBClient
 
@@ -33,27 +34,33 @@ def decode(msg):
 
             if port_dest == 80 or port_source == 80:
                 http_request = msg[offset:].decode(errors='ignore')
-                urls = re.search(r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})", http_request)
+                urls = re.search(r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,})", http_request)
               
                 if urls:
                     urls = urls.group(1)
-            
-                    print(urls)          
-                    json_body = [ 
-                                { "measurement": "cpu_load_short",
-                                "fields": {
-                                    "ether_type": ether_type, 
-                                    "enteteip":enteteip, 
-                                    "url":urls,
+                    try:
+                        r = requests.get(urls)
+                        # print(urls)          
+                        json_body = [ 
+                                    { "measurement": "cpu_load_short",
+                                    "fields": {
+                                        "ether_type": ether_type, 
+                                        "enteteip": enteteip, 
+                                        "url": urls,
+                                        "http-code": r.status_code
+                                        }
                                     }
-                                }
-                    ]
-            
-                    client.write_points(json_body)
-                    print('insert reussi---')
-                    result = client.query('SELECT url FROM cpu_load_short')
-                    print("Result: {0}".format(result), '---')
-                    #print("list database =",client.get_list_database(),'---')
+                        ]
+                        print("[HTTP CODE : " + str(r.status_code) + "] > " + urls)
+
+                        client.write_points(json_body)
+                        # print('insert reussi---')s
+                        result = client.query('SELECT url FROM cpu_load_short')
+                        # print("Result: {0}".format(result), '---')
+                        #print("list database =",client.get_list_database(),'---')  
+                    except requests.exceptions.ConnectionError:
+                        print("ConnectionError lors de la requête")
+                    
               
 
 
